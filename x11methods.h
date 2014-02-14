@@ -1,5 +1,5 @@
-#ifndef __XKRUNCHER__H__
-#define __XKRUNCHER__H__
+#ifndef __X11_METHODS_H__
+#define __X11_METHODS_H__
 
 	struct ApplicationBase {};
 
@@ -186,18 +186,18 @@
 		{ 
 			XEvent& e(keys);
 			if (!e.type) return true;
-			cout<<e.type<<" ? "<<Expose<<" - ";
+			cout<<"Ev>"<<e.type<<"  "<<Expose<<" - ";
 			if (e.type==NoExpose) 
 			{
-				cout<<"%"; cout.flush();
+				cout<<"NoExpose"; cout.flush();
 			}
 			if (e.type==GraphicsExpose) 
 			{
-				cout<<"%"; cout.flush();
+				cout<<"GraphicsExpose"; cout.flush();
 			}
 			if (e.type==Expose) 
 			{
-				cout<<"!"; cout.flush();
+				cout<<"Expose"; cout.flush();
 				canvas(bitmap);
 				canvas.invalid.clear();
 				canvas.invalid.insert(Rect(0,0,ScreenWidth,ScreenHeight));
@@ -213,18 +213,10 @@
 				XNextEvent(display,&e); 
 				if (e.type==KeyPress) keys=e; else keys.clear();
 				bool ret(events(bitmap,keys)); 
-				if (e.type==KeyPress) XSync(display,True);
+				XSync(display,True);
 				keys.clear();
 				return ret;
 			} 
-			return true;
-		}
-		private:
-
-		bool event(XEvent& e)
-		{
-			if (e.type==ButtonRelease) return false;
-			if (e.type==KeyPress) return false;
 			return true;
 		}
 
@@ -288,5 +280,5 @@
 	};
 
 
-#endif //__XKRUNCHER__H__
+#endif //__X11_METHODS_H__
 
