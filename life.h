@@ -25,8 +25,8 @@ namespace Life
 	{
 			LifeCell(X11Grid::GridBase& _grid,const int _x,const int _y,bool _dead=true)
 				: X11Grid::Cell(_grid,_x,_y),X(_x), Y(_y),
-					neighbors(0), dead(_dead),dying(false),grayscale(0X3F),age(0) , remove(false) { }
-			virtual bool update();
+					neighbors(0), dead(_dead),dying(false),grayscale(0X3),age(1) , remove(false) { }
+			virtual bool update(const unsigned long updateloop);
 			virtual void operator()(Pixmap& bitmap);
 			virtual bool Alive();
 			private:
@@ -46,13 +46,12 @@ namespace Life
 				if (it==end()) return false;
 				return it->second.Alive();
 			}
-			virtual bool update()
+			virtual bool update(const unsigned long updateloop)
 			{
 				if (empty()) return true;
 				for (iterator it=begin();it!=end();it++) 
-					if (it->second.update()) erase(it);
+					if (it->second.update(updateloop)) erase(it);
 				if (empty()) return true;
-				//return X11Grid::Column<TestStructure>::update();
 				return false;
 			}
 			virtual void operator()(Pixmap& bitmap)
@@ -62,7 +61,7 @@ namespace Life
 	struct LifeRow : X11Grid::Row<TestStructure>
 	{
 			LifeRow(X11Grid::GridBase& _grid) : X11Grid::Row<TestStructure>(_grid) {}
-			virtual void update() ;
+			virtual void update(const unsigned long updateloop) ;
 			virtual void operator()(Pixmap& bitmap)
 			{ 
 				for (LifeRow::iterator it=this->begin();it!=this->end();it++) it->second(bitmap);
@@ -149,16 +148,15 @@ namespace Life
 			XDrawString(display,bitmap,gc,20,120,ss.str().c_str(),ss.str().size());
 			X11Grid::Grid<TestStructure>::operator()(bitmap);
 		}
-		virtual void update() 
+		virtual void update()
 		{
 			TestStructure::RowType& grid(*this);
 			if (births) birthrate=((double)births/(double)updateloop);
 			++updateloop;
-			if ((updateloop)%updaterate) return;
 			if (updateloop>2000) if (birthrate<0.1) LifeRow::clear(); // this rule will reset the game if the birth rate is too low
+			if ((updateloop%updaterate)) return;
 			birthingpool.clear();
-			LifeRow::update();
-			//TestStructure::RowType::update();
+			LifeRow::update(updateloop);
 			if (endoflife>0)	// these additional rules will eventually cause births to cease and the game will start over
 			{
 				GridBase& me(*this);
@@ -218,14 +216,13 @@ namespace Life
 	};
 
 
-		bool LifeCell::update()
+		bool LifeCell::update(const unsigned long updateloop)
 		{
+			if (dying) {if (age>0) age--;} else if (age<0XFF) age++;
 			map<string,int>& metrics(static_cast<map<string,int>&>(grid));	
 			X11Grid::GridBase& gridbase(static_cast<X11Grid::GridBase&>(grid));	
 			LifeGrid& lifegrid(static_cast<LifeGrid&>(grid));	
-			//age++;
 			if (dying) if (!dead) metrics["about to die"]++;
-			if (dying) if (!dead) grayscale=0XF0;
 			if (dying) dead=true;
 			neighbors=lifegrid(X,Y);
 			if (neighbors<2) dying=true;
@@ -239,16 +236,9 @@ namespace Life
 
 		void LifeCell::operator()(Pixmap& bitmap)
 		{
-			unsigned long color((grayscale+0XFF)<<8);
-			if (dying) if (!dead) color=(grayscale<<8)|(grayscale);
-			if (!dying) if (grayscale>(0XFF>>1)) color=(grayscale<<16)|(grayscale<<8)|(grayscale);
-			if (dying) {if (grayscale>4) grayscale-=4; else grayscale=0;}
-			else {if (grayscale<250) grayscale+=4; else grayscale=255;}
-			if (age>100) color=((grayscale<<16)|(grayscale<<8));
-			if (age<10) if (dying) color=((grayscale<<2)<<16);
+			unsigned long color(((grayscale*age)<<8) | (grayscale*age) );
 			if (dead) color=0X3333;
 			grid(color,bitmap,X,Y);
-			//X11Grid::Cell::operator()(bitmap); 
 			if (dead) remove=true;
 		}
 		bool LifeCell::Alive() 
@@ -266,7 +256,7 @@ namespace Life
 			if (it==end()) throw runtime_error("Cannot create column");
 		}
 
-			void LifeRow::update() 
+			void LifeRow::update(const unsigned long updateloop) 
 			{
 				map<string,int>& metrics(static_cast<map<string,int>&>(grid));	
 				//metrics.clear();
@@ -276,8 +266,7 @@ namespace Life
 				metrics["dying"]=0;
 				if (empty()) seed();
 				for (iterator it=begin();it!=end();it++) 
-					if (it->second.update()) erase(it);
-				//X11Grid::Row<TestStructure>::update(); 
+					if (it->second.update(updateloop)) erase(it);
 			}
 } // Life
 #endif  //__LIFE_H__
