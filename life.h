@@ -23,23 +23,23 @@ namespace Life
 
 	struct ColorCurve
 	{
-		ColorCurve(X11Grid::GridBase& _grid,double _sx,double _sy) : grid(_grid),sx(_sx), sy(_sy),t(0),c(0),alive(true) {}
+		ColorCurve(X11Grid::GridBase& _grid,double _sx,double _sy) : grid(_grid),sx(_sx), sy(_sy),t(0),c(0X33),alive(true) {}
 		void operator()()
 		{
-			if (alive) if (c==255) return;
-			if (!alive) if (t<300) t=300;
-
-			t++; 
-			if (t>600) return;
-			if (t<300) c=(log(t)*50);
-			if (t>300) c=300-((log(t-300)*50));
+			if (alive) if (c>=0XFF) {c=0XFF;return;}
+			if (!alive) if (t<150) t=150;
+			t+=1; 
+			double T((t*1000)/300);
+			if (T>1000) return;
+			if (T<500) c=(log(T)*50);
+			if (T>500) c=255-((log(T-500)*50));
 			if (c>255) c=255;
-			if (c<0X3333) c=0X3333;
+			if (c<0) c=0;
 			double y=-c;
-			Point p(sx+t,y+sy);
-			grid[p]=0XFF0000;
+			double range(0XFF-0X33);
+			c=((c/0XFF)*range)+0X33;
 		}
-		operator int (){return floor(c);}
+		operator const unsigned long (){return floor(c);}
 		void operator = (bool b){alive=b;}
 		private:
 		X11Grid::GridBase& grid;
@@ -142,7 +142,7 @@ namespace Life
 	{
 		LifeGrid(Display* _display,GC& _gc,const int _ScreenWidth, const int _ScreenHeight)
 			: X11Grid::Grid<TestStructure>(_display,_gc,_ScreenWidth,_ScreenHeight),
-					updaterate(40),updateloop(0),birthrate(0),endoflife(10000), populationcontrol(0),births(0)  {}
+					updaterate(40),updateloop(0),birthrate(0),endoflife(0), populationcontrol(0),births(0)  {}
 		int births;
 		private:
 		const int updaterate;
@@ -181,7 +181,7 @@ namespace Life
 			TestStructure::RowType& grid(*this);
 			if (births) birthrate=((double)births/(double)updateloop);
 			++updateloop;
-			if (updateloop>20) if (birthrate<1) LifeRow::clear(); // this rule will reset the game if the birth rate is too low
+			//if (updateloop>20) if (birthrate<1) LifeRow::clear(); // this rule will reset the game if the birth rate is too low
 			//if ((updateloop%updaterate)) return;
 			birthingpool.clear();
 			LifeRow::update(updateloop,updaterate);
@@ -266,11 +266,10 @@ namespace Life
 
 		void LifeCell::operator()(Pixmap& bitmap)
 		{
-			int c(curve);
+			const unsigned long  c(curve);
 			unsigned long color((c<<8)|c);
-			if (dead) color=0X3333;
 			grid(color,bitmap,X,Y);
-			if (dead) remove=true;
+			if (dead) if (c==0X33) remove=true;
 		}
 		bool LifeCell::Alive() 
 		{ 
