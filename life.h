@@ -28,7 +28,7 @@ namespace Life
 		{
 			if (alive) if (c>=0XFF) {c=0XFF;return;}
 			if (!alive) if (t<150) t=150;
-			t+=1; 
+			t+=0.1; 
 			double T((t*1000)/300);
 			if (T>1000) return;
 			if (T<500) c=(log(T)*50);
@@ -103,10 +103,10 @@ namespace Life
 			protected:
 			void Birth(const int x,const int y)
 			{
-				//if (x<0) return;
-				//if (y<0) return;
-				//if (x>width) return;
-				//if (y>height) return;
+				if (x<3) return;
+				if (y<20) return;
+				if (x>80) return;
+				if (y>80) return;
 				if (find(x)==end()) insert(make_pair<int,LifeColumn>(x,LifeColumn(grid,x)));
 				iterator it(find(x));
 				if (it==end()) throw runtime_error("Cannot create row");
@@ -120,7 +120,7 @@ namespace Life
 				{
 					const int cx((rand()%10)+10);
 					const int cy((rand()%10)+30);
-					if (true)
+					if (false)
 					{
 						Birth(cx,cy);
 						Birth(cx+1,cy);
@@ -142,7 +142,7 @@ namespace Life
 	{
 		LifeGrid(Display* _display,GC& _gc,const int _ScreenWidth, const int _ScreenHeight)
 			: X11Grid::Grid<TestStructure>(_display,_gc,_ScreenWidth,_ScreenHeight),
-					updaterate(40),updateloop(0),birthrate(0),endoflife(0), populationcontrol(0),births(0)  {}
+					updaterate(20),updateloop(0),birthrate(0),endoflife(20000), populationcontrol(0),births(0)  {}
 		int births;
 		private:
 		const int updaterate;
@@ -181,7 +181,7 @@ namespace Life
 			TestStructure::RowType& grid(*this);
 			if (births) birthrate=((double)births/(double)updateloop);
 			++updateloop;
-			//if (updateloop>20) if (birthrate<1) LifeRow::clear(); // this rule will reset the game if the birth rate is too low
+			if (updateloop>200) if (birthrate<0.1) LifeRow::clear(); // this rule will reset the game if the birth rate is too low
 			//if ((updateloop%updaterate)) return;
 			birthingpool.clear();
 			LifeRow::update(updateloop,updaterate);
