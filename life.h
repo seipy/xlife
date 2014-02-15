@@ -142,7 +142,7 @@ namespace Life
 	{
 		LifeGrid(Display* _display,GC& _gc,const int _ScreenWidth, const int _ScreenHeight)
 			: X11Grid::Grid<TestStructure>(_display,_gc,_ScreenWidth,_ScreenHeight),
-					updaterate(20),updateloop(0),birthrate(0),endoflife(20000), populationcontrol(0),births(0)  {}
+					updaterate(20),updateloop(0),birthrate(0),endoflife(2000), populationcontrol(0),births(0)  {}
 		int births;
 		private:
 		const int updaterate;
