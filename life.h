@@ -21,12 +21,39 @@ namespace Life
 			typedef LifeCell CellType;
 	};
 
+	struct ColorCurve
+	{
+		ColorCurve(X11Grid::GridBase& _grid,double _sx,double _sy) : grid(_grid),sx(_sx), sy(_sy),t(0),c(0),alive(true) {}
+		void operator()()
+		{
+			if (alive) if (c==255) return;
+			if (!alive) if (t<300) t=300;
+
+			t++; 
+			if (t>600) return;
+			if (t<300) c=(log(t)*50);
+			if (t>300) c=300-((log(t-300)*50));
+			if (c>255) c=255;
+			if (c<0X3333) c=0X3333;
+			double y=-c;
+			Point p(sx+t,y+sy);
+			grid[p]=0XFF0000;
+		}
+		operator int (){return floor(c);}
+		void operator = (bool b){alive=b;}
+		private:
+		X11Grid::GridBase& grid;
+		const double sx,sy;
+		double t,c;
+		bool alive;
+	};
+
 	struct LifeCell : X11Grid::Cell
 	{
 			LifeCell(X11Grid::GridBase& _grid,const int _x,const int _y,bool _dead=true)
 				: X11Grid::Cell(_grid,_x,_y),X(_x), Y(_y),
-					neighbors(0), dead(_dead),dying(false),grayscale(0X3),age(1) , remove(false) { }
-			virtual bool update(const unsigned long updateloop);
+					neighbors(0), dead(_dead),dying(false),grayscale(0X3),age(1) , remove(false),curve(grid,200,600) { }
+			virtual bool update(const unsigned long updateloop,const unsigned long updaterate);
 			virtual void operator()(Pixmap& bitmap);
 			virtual bool Alive();
 			private:
@@ -34,6 +61,7 @@ namespace Life
 			int neighbors;
 			bool dead,dying,remove;
 			unsigned long grayscale,age;
+			ColorCurve curve;
 	};
 
 	struct LifeColumn : X11Grid::Column<TestStructure>
@@ -46,11 +74,11 @@ namespace Life
 				if (it==end()) return false;
 				return it->second.Alive();
 			}
-			virtual bool update(const unsigned long updateloop)
+			virtual bool update(const unsigned long updateloop,const unsigned long updaterate)
 			{
 				if (empty()) return true;
 				for (iterator it=begin();it!=end();it++) 
-					if (it->second.update(updateloop)) erase(it);
+					if (it->second.update(updateloop,updaterate)) erase(it);
 				if (empty()) return true;
 				return false;
 			}
@@ -61,7 +89,7 @@ namespace Life
 	struct LifeRow : X11Grid::Row<TestStructure>
 	{
 			LifeRow(X11Grid::GridBase& _grid) : X11Grid::Row<TestStructure>(_grid) {}
-			virtual void update(const unsigned long updateloop) ;
+			virtual void update(const unsigned long updateloop,const unsigned long updaterate) ;
 			virtual void operator()(Pixmap& bitmap)
 			{ 
 				for (LifeRow::iterator it=this->begin();it!=this->end();it++) it->second(bitmap);
@@ -153,10 +181,10 @@ namespace Life
 			TestStructure::RowType& grid(*this);
 			if (births) birthrate=((double)births/(double)updateloop);
 			++updateloop;
-			if (updateloop>2000) if (birthrate<0.1) LifeRow::clear(); // this rule will reset the game if the birth rate is too low
-			if ((updateloop%updaterate)) return;
+			if (updateloop>20) if (birthrate<1) LifeRow::clear(); // this rule will reset the game if the birth rate is too low
+			//if ((updateloop%updaterate)) return;
 			birthingpool.clear();
-			LifeRow::update(updateloop);
+			LifeRow::update(updateloop,updaterate);
 			if (endoflife>0)	// these additional rules will eventually cause births to cease and the game will start over
 			{
 				GridBase& me(*this);
@@ -216,9 +244,10 @@ namespace Life
 	};
 
 
-		bool LifeCell::update(const unsigned long updateloop)
+		bool LifeCell::update(const unsigned long updateloop,const unsigned long updaterate)
 		{
-			if (dying) {if (age>0) age--;} else if (age<0XFF) age++;
+			curve();
+			if (updateloop%updaterate) return false;
 			map<string,int>& metrics(static_cast<map<string,int>&>(grid));	
 			X11Grid::GridBase& gridbase(static_cast<X11Grid::GridBase&>(grid));	
 			LifeGrid& lifegrid(static_cast<LifeGrid&>(grid));	
@@ -231,12 +260,14 @@ namespace Life
 			if (!dead) metrics["live"]++; 
 			if (dead) metrics["dead"]++; 
 			if (dying) metrics["dying"]++; 
+			if (dying) curve=false;
 			return remove;
 		}
 
 		void LifeCell::operator()(Pixmap& bitmap)
 		{
-			unsigned long color(((grayscale*age)<<8) | (grayscale*age) );
+			int c(curve);
+			unsigned long color((c<<8)|c);
 			if (dead) color=0X3333;
 			grid(color,bitmap,X,Y);
 			if (dead) remove=true;
@@ -256,17 +287,16 @@ namespace Life
 			if (it==end()) throw runtime_error("Cannot create column");
 		}
 
-			void LifeRow::update(const unsigned long updateloop) 
+			void LifeRow::update(const unsigned long updateloop,const unsigned long updaterate) 
 			{
 				map<string,int>& metrics(static_cast<map<string,int>&>(grid));	
-				//metrics.clear();
 				metrics["about to die"]=0;
 				metrics["live"]=0;
 				metrics["dead"]=0;
 				metrics["dying"]=0;
 				if (empty()) seed();
 				for (iterator it=begin();it!=end();it++) 
-					if (it->second.update(updateloop)) erase(it);
+					if (it->second.update(updateloop,updaterate)) erase(it);
 			}
 } // Life
 #endif  //__LIFE_H__
