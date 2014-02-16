@@ -10,7 +10,7 @@ namespace Life
 	//dead cells that have three live neighbors will come to life
 
 
-	#if 1
+	#if 0
 		struct Invalid : X11Methods::InvalidArea<Rect> 
 			{ void insert(const int _x,const int _y,Rect r) {set<Rect>::insert(r); } };
 	#else
@@ -37,10 +37,6 @@ namespace Life
 			if (alive) if (c>=0XFF) {c=0XFF;return;}
 			if (!alive) if (t<150) t=150;
 			t+=0.1; 
-			if (!alive) c=0X3333; 
-			c=0XFF; 
-			return;
-
 			double T((t*1000)/300);
 			if (T>1000) return;
 			if (T<500) c=(log(T)*50);
@@ -307,8 +303,7 @@ namespace Life
 		void LifeCell::operator()(Pixmap& bitmap)
 		{
 			const unsigned long  c(curve);
-			//unsigned long color((c<<8)|c);
-			unsigned long color(c);
+			unsigned long color((c<<8)|c);
 			grid(color,bitmap,X,Y);
 			if (dead) if (c==0X33) remove=true;
 		}
