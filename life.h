@@ -238,7 +238,7 @@ namespace Life
 			if (color!=0X3333)
 			{
 				const int border(2);
-				X11Grid::ProximityRectangle r(_x,_y,(x-(CW/2))+border,(y-(CH/2))+border,(x+(CW/2))-border,(y+(CH/2))-border);	
+				X11Methods::Rect r((x-(CW/2))+border,(y-(CH/2))+border,(x+(CW/2))-border,(y+(CH/2))-border);	
 				X11Grid::ProximityRectangle i(_x,_y,(x-(CW/2)),(y-(CH/2)),(x+(CW/2)),(y+(CH/2)));	
 				XPoint& points(r);
 				XPoint& bpoints(i);
