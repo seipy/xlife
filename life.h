@@ -9,6 +9,14 @@ namespace Life
 	//live cells that have greater than three live neighbors will die
 	//dead cells that have three live neighbors will come to life
 
+
+	#if 1
+		struct Invalid : X11Methods::InvalidArea<Rect> 
+			{ void insert(const int _x,const int _y,Rect r) {set<Rect>::insert(r); } };
+	#else
+		struct Invalid : X11Grid::InvalidGrid { };
+	#endif
+
 	struct LifeGrid;
 	struct LifeRow;
 	struct LifeColumn;
@@ -53,7 +61,7 @@ namespace Life
 	{
 			LifeCell(X11Grid::GridBase& _grid,const int _x,const int _y,bool _dead=true)
 				: X11Grid::Cell(_grid,_x,_y),X(_x), Y(_y),
-					neighbors(0), dead(_dead),dying(false),remove(false),lastcolor(0), curve(grid,200,600) { }
+					neighbors(0), dead(_dead),dying(false),remove(false),curve(grid,200,600) { }
 			virtual bool update(const unsigned long updateloop,const unsigned long updaterate);
 			virtual void operator()(Pixmap& bitmap);
 			virtual bool Alive();
@@ -61,7 +69,6 @@ namespace Life
 			const int X,Y;
 			int neighbors;
 			bool dead,dying,remove;
-			unsigned long lastcolor;
 			ColorCurve curve;
 	};
 
@@ -143,152 +150,6 @@ namespace Life
 			}
 	};
 
-	struct ProxiRect : X11Methods::Rect
-	{
-		ProxiRect() : x(0), y(0), proxi(false),discard(false) {} 
-		ProxiRect(const int _x,const int _y) : x(_x), y(_y), proxi(true),discard(false) {}
-		ProxiRect(const int _x,const int _y,const int ulx,const int uly,const int brx,const int bry) 
-			: x(_x), y(_y), X11Methods::Rect(ulx,uly,brx,bry), proxi(false),discard(false) {}
-		ProxiRect(const ProxiRect& a) : x(a.x),y(a.y), X11Methods::Rect(a),proxi(false),discard(false) {}
-		ProxiRect& operator=(const ProxiRect& a) { x=a.x; y=a.y; X11Methods::Rect::operator=(a);proxi=false;discard=false; }
-		virtual ~ProxiRect() { for (vector<Rect*>::iterator it=subs.begin();it!=subs.end();it++) delete (*it); }
-		bool consumed(bool d) const {if (!d) return discard; discard=d;}
-		void operator()(const ProxiRect& e) 
-		{ 
-				//subs.push_back(new ProxiRect(r));	
-				ProxiRect& r(*this);
-					if (e.first.first<r.first.first) r.first.first=e.first.first;
-					if (e.first.second<r.first.second) r.first.second=e.first.second;
-					if (e.second.first>r.second.first) r.second.first=e.second.first;
-					if (e.second.second>r.second.second) r.second.second=e.second.second;
-		}
-		void zero() { first.first=first.second=0; second.first=second.second=100; }
-		virtual operator XPoint& ()
-		{
-			if (xpoints) delete[] xpoints;
-			xpoints=new XPoint[4];	
-			ProxiRect r(*this);
-			if (!subs.empty()) 
-			{
-				for (vector<Rect*>::iterator it=subs.begin();it!=subs.end();it++)
-				{
-					Rect& e(**it);
-					if (e.first.first<r.first.first) r.first.first=e.first.first;
-					if (e.first.second<r.first.second) r.first.second=e.first.second;
-					if (e.second.first>r.second.first) r.second.first=e.second.first;
-					if (e.second.second>r.second.second) r.second.second=e.second.second;
-				}
-			}
-			xpoints[0].x=r.first.first;
-			xpoints[0].y=r.first.second;
-			xpoints[1].x=r.second.first;
-			xpoints[1].y=r.first.second;
-			xpoints[2].x=r.second.first;
-			xpoints[2].y=r.second.second;
-			xpoints[3].x=r.first.first;
-			xpoints[3].y=r.second.second;
-//cout<<"P:"<<r.first<<"x"<<r.second<<endl;
-			return *xpoints;
-		}
-
-		bool lessthan(ProxiRect& p)  
-		{
-			if ( !proxi ) return X11Methods::Rect::operator<(p); //const_cast<ProxiRect&>(p));
-			if(x<p.x) return true;
-			if (y<p.y) return true;
-			return false;
-		}
-		operator const vector<Point>& () const
-		{
-				neighbors.push_back(Point(x-1,y));
-				neighbors.push_back(Point(x-1,y+1));
-				neighbors.push_back(Point(x-1,y-1));
-				neighbors.push_back(Point(x+1,y));
-				neighbors.push_back(Point(x+1,y+1));
-				neighbors.push_back(Point(x+1,y-1));
-				neighbors.push_back(Point(x,y+1));
-				neighbors.push_back(Point(x,y-1));
-				return neighbors;
-		}
-		private:
-		mutable vector<Point> neighbors;
-		int x,y;
-		bool proxi;
-		mutable bool discard;
-		vector<Rect*> subs;
-	};
-	inline bool operator<(const ProxiRect& a,const ProxiRect& b)
-	{
-		return const_cast<ProxiRect&>(b).lessthan(const_cast<ProxiRect&>(a));
-	}
-
-	struct InvalidAreas : InvalidArea<ProxiRect>
-	{
-		InvalidAreas() : color(0XF){}
-		void insert(const int x,const int y,ProxiRect r) { X11Methods::InvalidArea<ProxiRect>::insert(r); }
-		private:
-		unsigned long color;
-		iterator find(const Point& p) 
-		{ 
-			ProxiRect tmp(p.first,p.second);
-			return set<ProxiRect>::find(tmp);
-		}
-		virtual void Show(Display* display,Pixmap& bitmap,Window& window,GC& gc)
-		{
-			return;
-			XSetForeground(display,gc,0X333333);
-			for (iterator it=begin();it!=end();it++)
-			{
-				ProxiRect& r(const_cast<ProxiRect&>(*it));
-				XPoint& points(r);
-				int x(r.first.first);
-				int y(r.first.second);
-				int w(r.second.first-x);
-				int h(r.second.second-y);
-				//XFillRectangle(display,bitmap,gc,x,y,w,h);
-			}
-			InvalidArea<ProxiRect>::Trace(display,bitmap,window,gc,0XF);
-			
-		}
-		virtual void expose() 
-		{
-			clear();
-			ProxiRect i(0,0,0,0,1024,768);//(x-(CW/2)),(y-(CH/2)),(x+(CW/2)),(y+(CH/2)));	
-			insert(0,0,i);
-		}
-		virtual void reduce()
-		{
-			return;
-			//cout<<"Reducing:"<<setw(4)<<size()<<" ";
-			vector<ProxiRect> killset;
-			for (iterator it=begin();it!=end();it++)
-			{
-				ProxiRect& r(const_cast<ProxiRect&>(*it));
-				//if (r.consumed(false)) continue;
-				//cout<<r<<" ";
-				const vector<Point>& p(r);;
-				for (vector<Point>::const_iterator rit=p.begin();rit!=p.end();rit++)
-				{
-					const Point& P(*rit);
-					iterator found(find(P));
-					if (found!=it)
-						if (found!=end()) 
-						{ 
-							//cout<<" f>"<<(*found)<<" ";
-							r(*found);
-							erase(found);
-						}
-				}
-			}
-			//cout<<endl<<"Reduced:"<<setw(4)<<size()<<" "; 
-			for (iterator it=begin();it!=end();it++)
-			{
-				ProxiRect& r(const_cast<ProxiRect&>(*it));
-				//cout<<r<<" ";
-			}
-			//cout<<endl; cout.flush();
-		}
-	};
 
 
 	struct LifeGrid : X11Grid::Grid<TestStructure>
@@ -300,12 +161,11 @@ namespace Life
 		virtual operator InvalidBase& () {return invalid;}
 		int births;
 		private:
-		InvalidAreas invalid;
+		Invalid invalid;
 		const int CW,CH;
 		const int updaterate;
 		unsigned long updateloop;
 		double birthrate;
-		//ProxiRect paint;
 		const double endoflife;
 		double populationcontrol;
 		struct BirthingPool : map<Point,int> { } birthingpool;
@@ -372,14 +232,14 @@ namespace Life
 		void operator()(const unsigned long color,Pixmap&  bitmap,const int _x,const int _y)
 		{
 			InvalidBase& _invalidbase(*this);
-			InvalidAreas& _invalid(static_cast<InvalidAreas&>(_invalidbase));
+			Invalid& _invalid(static_cast<Invalid&>(_invalidbase));
 			const int x(_x*CW);
 			const int y(_y*CW);
 			if (color!=0X3333)
 			{
 				const int border(2);
-				ProxiRect r(_x,_y,(x-(CW/2))+border,(y-(CH/2))+border,(x+(CW/2))-border,(y+(CH/2))-border);	
-				ProxiRect i(_x,_y,(x-(CW/2)),(y-(CH/2)),(x+(CW/2)),(y+(CH/2)));	
+				X11Grid::ProximityRectangle r(_x,_y,(x-(CW/2))+border,(y-(CH/2))+border,(x+(CW/2))-border,(y+(CH/2))-border);	
+				X11Grid::ProximityRectangle i(_x,_y,(x-(CW/2)),(y-(CH/2)),(x+(CW/2)),(y+(CH/2)));	
 				XPoint& points(r);
 				XPoint& bpoints(i);
 				XSetForeground(display,gc,0X3333);
@@ -389,7 +249,7 @@ namespace Life
 				_invalid.insert(_x,_y,i);
 			} else {
 				const int border(0);
-				ProxiRect r(_x,_y,(x-(CW/2))+border,(y-(CH/2))+border,(x+(CW/2))-border,(y+(CH/2))-border);	
+				X11Grid::ProximityRectangle r(_x,_y,(x-(CW/2))+border,(y-(CH/2))+border,(x+(CW/2))-border,(y+(CH/2))-border);	
 				XPoint& points(r);
 				XSetForeground(display,gc,color);
 				XFillPolygon(display,bitmap,  gc,&points, 4, Complex, CoordModeOrigin);
@@ -444,12 +304,8 @@ namespace Life
 		{
 			const unsigned long  c(curve);
 			unsigned long color((c<<8)|c);
-//color=0X00FF00;
-			//if (lastcolor!=color) 
-					grid(color,bitmap,X,Y);
-			lastcolor=color;
+			grid(color,bitmap,X,Y);
 			if (dead) if (c==0X33) remove=true;
-//			if (dead) remove=true;
 		}
 		bool LifeCell::Alive() 
 		{ 
