@@ -37,6 +37,10 @@ namespace Life
 			if (alive) if (c>=0XFF) {c=0XFF;return;}
 			if (!alive) if (t<150) t=150;
 			t+=0.1; 
+			if (!alive) c=0X3333; 
+			c=0XFF; 
+			return;
+
 			double T((t*1000)/300);
 			if (T>1000) return;
 			if (T<500) c=(log(T)*50);
@@ -134,14 +138,17 @@ namespace Life
 				int down(H/CH);
 				for (int y=0;y<10;y++)
 				{
-					const int cx(accross-2);
-					const int cy(down-2);
-					if (false)
+					const int cx(accross/2);
+					const int cy(down/2);
+					if (true)
 					{
 						Birth(cx,cy,ScreenWidth,ScreenHeight,CW,CH);
 						Birth(cx+1,cy,ScreenWidth,ScreenHeight,CW,CH);
 						Birth(cx+1,cy+1,ScreenWidth,ScreenHeight,CW,CH);
 						Birth(cx,cy+1,ScreenWidth,ScreenHeight,CW,CH);
+						Birth(cx+(rand()%2),cy+1+(rand()%2),ScreenWidth,ScreenHeight,CW,CH);
+						Birth(cx+(rand()%2),cy+1+(rand()%2),ScreenWidth,ScreenHeight,CW,CH);
+						Birth(cx+(rand()%2),cy+1+(rand()%2),ScreenWidth,ScreenHeight,CW,CH);
 						return;
 					}
 					for (int j=0;j<((rand()%20)+10);j++)
@@ -171,15 +178,12 @@ namespace Life
 		struct BirthingPool : map<Point,int> { } birthingpool;
 		virtual void seed()
 		{
-			//InvalidBase& _invalid(*this);
-			//_invalid.insert(Rect(0,0,ScreenWidth,ScreenHeight));	
 			updateloop=1;
 			births=birthrate=0;
 			LifeRow::seed(ScreenWidth,ScreenHeight,CW,CH);
 		}
 		void operator()(Pixmap& bitmap) 
 		{ 
-			//paint.clear();
 			#if 0
 			stringstream ss;
 			stringstream ssupdates; ssupdates<<"Update:"<<updateloop;
@@ -303,7 +307,8 @@ namespace Life
 		void LifeCell::operator()(Pixmap& bitmap)
 		{
 			const unsigned long  c(curve);
-			unsigned long color((c<<8)|c);
+			//unsigned long color((c<<8)|c);
+			unsigned long color(c);
 			grid(color,bitmap,X,Y);
 			if (dead) if (c==0X33) remove=true;
 		}
