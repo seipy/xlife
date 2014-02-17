@@ -135,21 +135,21 @@ namespace Life
 				int H(ScreenHeight-CH);
 				int accross(W/CW);
 				int down(H/CH);
+				if (rand()%2)
+				{
+					const int cx(accross/2);
+					const int cy(down/2);
+					Birth(cx,cy,ScreenWidth,ScreenHeight,CW,CH);
+					Birth(cx+1,cy,ScreenWidth,ScreenHeight,CW,CH);
+					Birth(cx+1,cy+1,ScreenWidth,ScreenHeight,CW,CH);
+					Birth(cx,cy+1,ScreenWidth,ScreenHeight,CW,CH);
+					for (int j=1;j<(rand()%4)+2;j++) Birth(cx+(rand()%j)+1,cy+1+(rand()%j),ScreenWidth,ScreenHeight,CW,CH);
+					return;
+				}
 				for (int y=0;y<10;y++)
 				{
 					const int cx(accross/2);
 					const int cy(down/2);
-					if (false)
-					{
-						Birth(cx,cy,ScreenWidth,ScreenHeight,CW,CH);
-						Birth(cx+1,cy,ScreenWidth,ScreenHeight,CW,CH);
-						Birth(cx+1,cy+1,ScreenWidth,ScreenHeight,CW,CH);
-						Birth(cx,cy+1,ScreenWidth,ScreenHeight,CW,CH);
-						Birth(cx+(rand()%2)+1,cy+1+(rand()%2),ScreenWidth,ScreenHeight,CW,CH);
-						Birth(cx+(rand()%2)+1,cy+1+(rand()%2),ScreenWidth,ScreenHeight,CW,CH);
-						Birth(cx+(rand()%2)+1,cy+1+(rand()%2),ScreenWidth,ScreenHeight,CW,CH);
-						return;
-					}
 					for (int j=0;j<((rand()%20)+10);j++)
 						Birth((rand()%accross),(rand()%down),ScreenWidth,ScreenHeight,CW,CH);
 				}
@@ -211,7 +211,6 @@ namespace Life
 			if (births) birthrate=((double)births/(double)updateloop);
 			++updateloop;
 			if (updateloop>200) if (birthrate<0.1) LifeRow::clear(); // this rule will reset the game if the birth rate is too low
-			//if ((updateloop%updaterate)) return;
 			birthingpool.clear();
 			LifeRow::update(updateloop,updaterate);
 			if (endoflife>0)	// these additional rules will eventually cause births to cease and the game will start over
