@@ -1,6 +1,7 @@
 
 #ifndef __LIFE_H__
 #define __LIFE_H__
+#include <math.h>
 namespace Life
 {
 	//Rules
@@ -8,7 +9,6 @@ namespace Life
 	//live cells that have two or three live neighbors stays alive
 	//live cells that have greater than three live neighbors will die
 	//dead cells that have three live neighbors will come to life
-
 
 	#if 0
 		struct Invalid : X11Methods::InvalidArea<Rect> 
