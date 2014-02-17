@@ -136,15 +136,15 @@ namespace Life
 				{
 					const int cx(accross/2);
 					const int cy(down/2);
-					if (true)
+					if (false)
 					{
 						Birth(cx,cy,ScreenWidth,ScreenHeight,CW,CH);
 						Birth(cx+1,cy,ScreenWidth,ScreenHeight,CW,CH);
 						Birth(cx+1,cy+1,ScreenWidth,ScreenHeight,CW,CH);
 						Birth(cx,cy+1,ScreenWidth,ScreenHeight,CW,CH);
-						Birth(cx+(rand()%2),cy+1+(rand()%2),ScreenWidth,ScreenHeight,CW,CH);
-						Birth(cx+(rand()%2),cy+1+(rand()%2),ScreenWidth,ScreenHeight,CW,CH);
-						Birth(cx+(rand()%2),cy+1+(rand()%2),ScreenWidth,ScreenHeight,CW,CH);
+						Birth(cx+(rand()%2)+1,cy+1+(rand()%2),ScreenWidth,ScreenHeight,CW,CH);
+						Birth(cx+(rand()%2)+1,cy+1+(rand()%2),ScreenWidth,ScreenHeight,CW,CH);
+						Birth(cx+(rand()%2)+1,cy+1+(rand()%2),ScreenWidth,ScreenHeight,CW,CH);
 						return;
 					}
 					for (int j=0;j<((rand()%20)+10);j++)
@@ -160,7 +160,7 @@ namespace Life
 		LifeGrid(Display* _display,GC& _gc,const int _ScreenWidth, const int _ScreenHeight)
 			: X11Grid::Grid<TestStructure>(_display,_gc,_ScreenWidth,_ScreenHeight),
 					CW(20),CH(20),
-					updaterate(20),updateloop(0),birthrate(0),endoflife(2000), populationcontrol(0),births(0)  {}
+					updaterate(10),updateloop(0),birthrate(0),endoflife(2000), populationcontrol(0),births(0)  {}
 		virtual operator InvalidBase& () {return invalid;}
 		int births;
 		private:
