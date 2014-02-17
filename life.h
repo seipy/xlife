@@ -31,13 +31,14 @@ namespace Life
 
 	struct ColorCurve
 	{
-		ColorCurve(X11Grid::GridBase& _grid,double _sx,double _sy) : grid(_grid),sx(_sx), sy(_sy),t(0),c(0X33),alive(true) {}
+		ColorCurve(X11Grid::GridBase& _grid,double _sx,double _sy) : grid(_grid),sx(_sx), sy(_sy),t(0),c(0X33),alive(true),
+			max(300) {}
 		void operator()()
 		{
 			if (alive) if (c>=0XFF) {c=0XFF;return;}
-			if (!alive) if (t<150) t=150;
+			if (!alive) if (t<(max/2)) t=(max/2);
 			t+=0.1; 
-			double T((t*1000)/300);
+			double T((t*1000)/max);
 			if (T>1000) return;
 			if (T<500) c=(log(T)*50);
 			if (T>500) c=255-((log(T-500)*50));
@@ -55,13 +56,14 @@ namespace Life
 		const double sx,sy;
 		double t,c;
 		bool alive;
+		const int max;
 	};
 
 	struct LifeCell : X11Grid::Cell
 	{
 			LifeCell(X11Grid::GridBase& _grid,const int _x,const int _y,bool _dead=true)
 				: X11Grid::Cell(_grid,_x,_y),X(_x), Y(_y),
-					neighbors(0), dead(_dead),dying(false),remove(false),curve(grid,200,600) { }
+					neighbors(0), dead(_dead),dying(false),remove(false),curve(grid,200,600),lastcolor(0) { }
 			virtual bool update(const unsigned long updateloop,const unsigned long updaterate);
 			virtual void operator()(Pixmap& bitmap);
 			virtual bool Alive();
@@ -70,6 +72,7 @@ namespace Life
 			int neighbors;
 			bool dead,dying,remove;
 			ColorCurve curve;
+			unsigned long lastcolor;
 	};
 
 	struct LifeColumn : X11Grid::Column<TestStructure>
@@ -194,8 +197,11 @@ namespace Life
 			XSetForeground(display,gc,0X7F7F7F);
 			XDrawString(display,bitmap,gc,20,120,ss.str().c_str(),ss.str().size());
 			#endif
-			XSetForeground(display,gc,0X3333);
-			XFillRectangle(display,bitmap,gc,0,00,ScreenWidth,ScreenHeight);
+			if (updateloop<3)
+			{
+				XSetForeground(display,gc,0X3333);
+				XFillRectangle(display,bitmap,gc,0,00,ScreenWidth,ScreenHeight);
+			}
 			X11Grid::Grid<TestStructure>::operator()(bitmap);
 		}
 		virtual void update()
@@ -304,7 +310,7 @@ namespace Life
 		{
 			const unsigned long  c(curve);
 			unsigned long color((c<<8)|c);
-			grid(color,bitmap,X,Y);
+			if (lastcolor!=color) grid(color,bitmap,X,Y); lastcolor=color;
 			if (dead) if (c==0X33) remove=true;
 		}
 		bool LifeCell::Alive() 
