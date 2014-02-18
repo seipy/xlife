@@ -62,7 +62,7 @@ namespace Life
 	struct LifeCell : X11Grid::Cell
 	{
 			LifeCell(X11Grid::GridBase& _grid,const int _x,const int _y,bool _dead=true)
-				: X11Grid::Cell(_grid,_x,_y),X(_x), Y(_y),
+				: X11Grid::Cell(_grid,_x,_y,0X333333),X(_x), Y(_y),
 					neighbors(0), dead(_dead),dying(false),remove(false),curve(grid,200,600),lastcolor(0) { }
 			virtual bool update(const unsigned long updateloop,const unsigned long updaterate);
 			virtual void operator()(Pixmap& bitmap);
@@ -135,24 +135,10 @@ namespace Life
 				int H(ScreenHeight-CH);
 				int accross(W/CW);
 				int down(H/CH);
-				if (rand()%2)
-				{
-					const int cx(accross/2);
-					const int cy(down/2);
-					Birth(cx,cy,ScreenWidth,ScreenHeight,CW,CH);
-					Birth(cx+1,cy,ScreenWidth,ScreenHeight,CW,CH);
-					Birth(cx+1,cy+1,ScreenWidth,ScreenHeight,CW,CH);
-					Birth(cx,cy+1,ScreenWidth,ScreenHeight,CW,CH);
-					for (int j=1;j<(rand()%4)+2;j++) Birth(cx+(rand()%j)+1,cy+1+(rand()%j),ScreenWidth,ScreenHeight,CW,CH);
-					return;
-				}
-				for (int y=0;y<10;y++)
-				{
-					const int cx(accross/2);
-					const int cy(down/2);
-					for (int j=0;j<((rand()%20)+10);j++)
-						Birth((rand()%accross),(rand()%down),ScreenWidth,ScreenHeight,CW,CH);
-				}
+				X11Grid::TestPatternGenerator g(accross,down);
+				X11Grid::PatternBase& p(g);
+				for (X11Grid::PatternBase::iterator pit=p.begin();pit!=p.end();pit++)
+					Birth(floor(pit->first),floor(pit->second),ScreenWidth,ScreenHeight,CW,CH);
 			}
 	};
 
@@ -160,9 +146,9 @@ namespace Life
 
 	struct LifeGrid : X11Grid::Grid<TestStructure>
 	{
-		LifeGrid(Display* _display,GC& _gc,const int _ScreenWidth, const int _ScreenHeight)
-			: X11Grid::Grid<TestStructure>(_display,_gc,_ScreenWidth,_ScreenHeight),
-					CW(20),CH(20),
+		LifeGrid(Display* _display,GC& _gc,const int _ScreenWidth, const int _ScreenHeight,const unsigned long _bkcolor)
+			: X11Grid::Grid<TestStructure>(_display,_gc,_ScreenWidth,_ScreenHeight,_bkcolor),
+					CW(12),CH(12),
 					updaterate(10),updateloop(0),birthrate(0),endoflife(2000), populationcontrol(0),births(0)  {}
 		virtual operator InvalidBase& () {return invalid;}
 		int births;
@@ -177,7 +163,7 @@ namespace Life
 		struct BirthingPool : map<Point,int> { } birthingpool;
 		virtual void seed()
 		{
-			updateloop=1;
+			updateloop=0;
 			births=birthrate=0;
 			LifeRow::seed(ScreenWidth,ScreenHeight,CW,CH);
 		}
@@ -199,7 +185,11 @@ namespace Life
 			#endif
 			if (updateloop<3)
 			{
-				XSetForeground(display,gc,0X3333);
+				XSetForeground(display,gc,bkcolor);
+				InvalidBase& _invalidbase(*this);
+				Invalid& _invalid(static_cast<Invalid&>(_invalidbase));
+				X11Grid::ProximityRectangle r(-10,-10,0,0,ScreenWidth,ScreenHeight);
+				_invalid.insert(-10,-10,r);
 				XFillRectangle(display,bitmap,gc,0,00,ScreenWidth,ScreenHeight);
 			}
 			X11Grid::Grid<TestStructure>::operator()(bitmap);
@@ -240,26 +230,12 @@ namespace Life
 			Invalid& _invalid(static_cast<Invalid&>(_invalidbase));
 			const int x(_x*CW);
 			const int y(_y*CW);
-			if (color!=0X3333)
-			{
-				const int border(2);
-				X11Methods::Rect r((x-(CW/2))+border,(y-(CH/2))+border,(x+(CW/2))-border,(y+(CH/2))-border);	
-				X11Grid::ProximityRectangle i(_x,_y,(x-(CW/2)),(y-(CH/2)),(x+(CW/2)),(y+(CH/2)));	
-				XPoint& points(r);
-				XPoint& bpoints(i);
-				XSetForeground(display,gc,0X3333);
-				XFillPolygon(display,bitmap,  gc,&bpoints, 4, Complex, CoordModeOrigin);
-				XSetForeground(display,gc,color);
-				XFillPolygon(display,bitmap,  gc,&points, 4, Complex, CoordModeOrigin);
-				_invalid.insert(_x,_y,i);
-			} else {
-				const int border(0);
-				X11Grid::ProximityRectangle r(_x,_y,(x-(CW/2))+border,(y-(CH/2))+border,(x+(CW/2))-border,(y+(CH/2))-border);	
-				XPoint& points(r);
-				XSetForeground(display,gc,color);
-				XFillPolygon(display,bitmap,  gc,&points, 4, Complex, CoordModeOrigin);
-				_invalid.insert(_x,_y,r);
-			}
+			const int border(2);
+			X11Grid::ProximityRectangle r(_x,_y,(x-(CW/2))+border,(y-(CH/2))+border,(x+(CW/2))-border,(y+(CH/2))-border);	
+			XPoint& points(r);
+			XSetForeground(display,gc,color);
+			XFillPolygon(display,bitmap,  gc,&points, 4, Complex, CoordModeOrigin);
+			_invalid.insert(_x,_y,r);
 		}
 		public:
 			int operator()(const int x,const int y) 
@@ -308,9 +284,9 @@ namespace Life
 		void LifeCell::operator()(Pixmap& bitmap)
 		{
 			const unsigned long  c(curve);
-			unsigned long color((c<<8)|c);
+			unsigned long color((c<<16)|(c<<8)|c);
 			if (lastcolor!=color) grid(color,bitmap,X,Y); lastcolor=color;
-			if (dead) if (c==0X33) remove=true;
+			if (dead) if (color==background) remove=true;
 		}
 		bool LifeCell::Alive() 
 		{ 

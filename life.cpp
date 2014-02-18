@@ -6,6 +6,6 @@ using namespace X11Methods;
 int main(int argc,char** argv)
 {
 	KeyMap keys;
-	return X11Grid::x11main<Life::TestStructure>(argc,argv,keys,0X3333);
+	return X11Grid::x11main<Life::TestStructure>(argc,argv,keys,0X333333);
 }
 
