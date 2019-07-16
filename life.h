@@ -115,8 +115,14 @@ namespace Life
 			virtual bool update(const unsigned long updateloop,const unsigned long updaterate)
 			{
 				if (empty()) return true;
+				vector< int > kil;
 				for (iterator it=begin();it!=end();it++) 
-					if (it->second.update(updateloop,updaterate)) erase(it);
+					if (it->second.update(updateloop,updaterate)) kil.push_back( it->first ); //erase(it);
+				for ( vector< int >::iterator kit=kil.begin();kit!=kil.end();kit++)
+				{
+					iterator found(this->find( *kit ));
+					if ( found != this->end() ) this->erase( found );				
+				}
 				if (empty()) return true;
 				return false;
 			}
@@ -337,8 +343,14 @@ namespace Life
 			metrics["live"]=0;
 			metrics["dead"]=0;
 			metrics["dying"]=0;
+			vector< int > kil;
 			for (iterator it=begin();it!=end();it++) 
-				if (it->second.update(updateloop,updaterate)) erase(it);
+				if (it->second.update(updateloop,updaterate)) kil.push_back( it->first );//erase(it);
+			for ( vector< int >::iterator kit=kil.begin();kit!=kil.end();kit++)
+			{
+				iterator found(this->find( *kit ));
+				if ( found != this->end() ) this->erase( found );				
+			}
 		}
 } // Life
 #endif  //__LIFE_H__
