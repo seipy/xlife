@@ -186,7 +186,7 @@ namespace Life
 	{
 		LifeGrid(Display* _display,GC& _gc,const int _ScreenWidth, const int _ScreenHeight,const unsigned long _bkcolor)
 			: X11Grid::Grid<TestStructure>(_display,_gc,_ScreenWidth,_ScreenHeight,_bkcolor),
-					CW(12),CH(12),
+					CW(32),CH(32),
 					updaterate(10),updateloop(0),birthrate(0),endoflife(2000), populationcontrol(0),births(0)  {}
 		virtual operator InvalidBase& () {return invalid;}
 		int births;
