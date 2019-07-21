@@ -88,91 +88,96 @@ namespace Life
 
 	struct LifeCell : X11Grid::Cell
 	{
-			LifeCell(X11Grid::GridBase& _grid,const int _x,const int _y,bool _dead=true)
-				: X11Grid::Cell(_grid,_x,_y,0X333333),X(_x), Y(_y),
-					neighbors(0), dead(_dead),dying(false),remove(false),curve(grid,200,600),lastcolor(0) { }
-			virtual bool update(const unsigned long updateloop,const unsigned long updaterate);
-			virtual void operator()(Pixmap& bitmap);
-			virtual bool Alive();
-			private:
-			const int X,Y;
-			int neighbors;
-			bool dead,dying,remove;
-			ColorCurve curve;
-			unsigned long lastcolor;
+		LifeCell(X11Grid::GridBase& _grid,const int _x,const int _y,bool _dead=true)
+			: X11Grid::Cell(_grid,_x,_y,0X333333),X(_x), Y(_y),
+				neighbors(0), dead(_dead),dying(false),remove(false),curve(grid,200,600),lastcolor(0) { }
+		virtual bool update(const unsigned long updateloop,const unsigned long updaterate);
+		virtual void operator()(Pixmap& bitmap);
+		virtual bool Alive();
+		private:
+		const int X,Y;
+		int neighbors;
+		bool dead,dying,remove;
+		ColorCurve curve;
+		unsigned long lastcolor;
 	};
 
 	struct LifeColumn : X11Grid::Column<TestStructure>
 	{
-			LifeColumn(X11Grid::GridBase& _grid,const int _position) : X11Grid::Column<TestStructure>(_grid,_position) {}
-			void Birth(const int x,const int y);
-			virtual bool Alive(Point& p)
+		LifeColumn(X11Grid::GridBase& _grid,const int _position) : X11Grid::Column<TestStructure>(_grid,_position) {}
+		void Birth(const int x,const int y);
+		virtual bool Alive(Point& p)
+		{
+			iterator it(find(p.second));
+			if (it==end()) return false;
+			return it->second.Alive();
+		}
+		virtual bool update(const unsigned long updateloop,const unsigned long updaterate)
+		{
+			if (empty()) return true;
+			vector< int > kil;
+			for (iterator it=begin();it!=end();it++) 
+				if (it->second.update(updateloop,updaterate)) kil.push_back( it->first ); //erase(it);
+			for ( vector< int >::iterator kit=kil.begin();kit!=kil.end();kit++)
 			{
-				iterator it(find(p.second));
-				if (it==end()) return false;
-				return it->second.Alive();
+				iterator found(this->find( *kit ));
+				if ( found != this->end() ) this->erase( found );				
 			}
-			virtual bool update(const unsigned long updateloop,const unsigned long updaterate)
-			{
-				if (empty()) return true;
-				vector< int > kil;
-				for (iterator it=begin();it!=end();it++) 
-					if (it->second.update(updateloop,updaterate)) kil.push_back( it->first ); //erase(it);
-				for ( vector< int >::iterator kit=kil.begin();kit!=kil.end();kit++)
-				{
-					iterator found(this->find( *kit ));
-					if ( found != this->end() ) this->erase( found );				
-				}
-				if (empty()) return true;
-				return false;
-			}
-			virtual void operator()(Pixmap& bitmap)
-				{ for (iterator it=begin();it!=end();it++) it->second(bitmap); }
+			if (empty()) return true;
+			return false;
+		}
+		virtual void operator()(Pixmap& bitmap)
+			{ for (iterator it=begin();it!=end();it++) it->second(bitmap); }
 	};
 
 	struct LifeRow : X11Grid::Row<TestStructure>
 	{
-			LifeRow(X11Grid::GridBase& _grid) : X11Grid::Row<TestStructure>(_grid) {}
-			virtual void update(const unsigned long updateloop,const unsigned long updaterate) ;
-			virtual void operator()(Pixmap& bitmap)
-			{ 
-				for (LifeRow::iterator it=this->begin();it!=this->end();it++) it->second(bitmap);
-			}
-			bool Alive(Point& p)
+		LifeRow(X11Grid::GridBase& _grid) : X11Grid::Row<TestStructure>(_grid) {}
+		virtual void update(const unsigned long updateloop,const unsigned long updaterate) ;
+		virtual void operator()(Pixmap& bitmap)
+		{ 
+			for (LifeRow::iterator it=this->begin();it!=this->end();it++) it->second(bitmap);
+		}
+		bool Alive(Point& p)
+		{
+			iterator it(find(p.first));
+			if (it==end()) return false;
+			return it->second.Alive(p);
+		}
+		protected:
+		void Birth(const int x,const int y,const int ScreenWidth,const int ScreenHeight,const int CW,const int CH)
+		{
+			int W(ScreenWidth-CW);
+			int H(ScreenHeight-CH);
+			int accross(W/CW);
+			int down(H/CH);
+			if (x<1) return;
+			if (y<1) return;
+			if (x>accross) return;
+			if (y>down) return;
+			if (find(x)==end())
 			{
-				iterator it(find(p.first));
-				if (it==end()) return false;
-				return it->second.Alive(p);
+				pair<int,LifeColumn> PP(x,LifeColumn(grid,x));
+				insert( PP );
+				//insert(make_pair<int,LifeColumn>(x,LifeColumn(grid,x)));
 			}
-			protected:
-			void Birth(const int x,const int y,const int ScreenWidth,const int ScreenHeight,const int CW,const int CH)
-			{
-				int W(ScreenWidth-CW);
-				int H(ScreenHeight-CH);
-				int accross(W/CW);
-				int down(H/CH);
-				if (x<1) return;
-				if (y<1) return;
-				if (x>accross) return;
-				if (y>down) return;
-				if (find(x)==end()) insert(make_pair<int,LifeColumn>(x,LifeColumn(grid,x)));
-				iterator it(find(x));
-				if (it==end()) throw runtime_error("Cannot create row");
-				it->second.Birth(x,y);
-			}
+			iterator it(find(x));
+			if (it==end()) throw runtime_error("Cannot create row");
+			it->second.Birth(x,y);
+		}
 
-			virtual void seed(const int ScreenWidth,const int ScreenHeight,const int CW,const int CH)
-			{
-				srand(time(0));
-				int W(ScreenWidth-CW);
-				int H(ScreenHeight-CH);
-				int accross(W/CW);
-				int down(H/CH);
-				X11Grid::TestPatternGenerator g(accross,down);
-				X11Grid::PatternBase& p(g);
-				for (X11Grid::PatternBase::iterator pit=p.begin();pit!=p.end();pit++)
-					Birth(floor(pit->first),floor(pit->second),ScreenWidth,ScreenHeight,CW,CH);
-			}
+		virtual void seed(const int ScreenWidth,const int ScreenHeight,const int CW,const int CH)
+		{
+			srand(time(0));
+			int W(ScreenWidth-CW);
+			int H(ScreenHeight-CH);
+			int accross(W/CW);
+			int down(H/CH);
+			X11Grid::TestPatternGenerator g(accross,down);
+			X11Grid::PatternBase& p(g);
+			for (X11Grid::PatternBase::iterator pit=p.begin();pit!=p.end();pit++)
+				Birth(floor(pit->first),floor(pit->second),ScreenWidth,ScreenHeight,CW,CH);
+		}
 	};
 
 
@@ -271,26 +276,26 @@ namespace Life
 			_invalid.insert(_x,_y,r);
 		}
 		public:
-			int operator()(const int x,const int y) 
+		int operator()(const int x,const int y) 
+		{
+			int n(0);
+			vector<Point> p;
+			p.push_back(Point(x-1,y));
+			p.push_back(Point(x-1,y+1));
+			p.push_back(Point(x-1,y-1));
+			p.push_back(Point(x+1,y));
+			p.push_back(Point(x+1,y+1));
+			p.push_back(Point(x+1,y-1));
+			p.push_back(Point(x,y+1));
+			p.push_back(Point(x,y-1));
+			for (vector<Point>::iterator it=p.begin();it!=p.end();it++)
 			{
-				int n(0);
-				vector<Point> p;
-				p.push_back(Point(x-1,y));
-				p.push_back(Point(x-1,y+1));
-				p.push_back(Point(x-1,y-1));
-				p.push_back(Point(x+1,y));
-				p.push_back(Point(x+1,y+1));
-				p.push_back(Point(x+1,y-1));
-				p.push_back(Point(x,y+1));
-				p.push_back(Point(x,y-1));
-				for (vector<Point>::iterator it=p.begin();it!=p.end();it++)
-				{
-					Point& P(*it);
-					birthingpool[P]++;
-					if (Alive(P)) n++;
-				}
-				return n;
+				Point& P(*it);
+				birthingpool[P]++;
+				if (Alive(P)) n++;
 			}
+			return n;
+		}
 	};
 
 
@@ -331,7 +336,9 @@ namespace Life
 			LifeGrid& lifegrid(static_cast<LifeGrid&>(grid));	
 			if (find(y)!=end()) return;
 			lifegrid.births++;
-			insert(make_pair<int,LifeCell>(y,LifeCell(grid,x,y,false)));
+			pair<int,LifeCell> P(y,LifeCell(grid,x,y,false));
+			insert( P );
+			//insert(make_pair<int,LifeCell>(y,LifeCell(grid,x,y,false)));
 			iterator it(find(y));
 			if (it==end()) throw runtime_error("Cannot create column");
 		}
